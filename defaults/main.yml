@@ -1,29 +1,29 @@
 ---
-postgres:
+docker_postgres:
   user: "admin"
-  password: "admin"
-  url: "postgres://{{ postgres['user'] }}:{{ postgres['password'] }}@postgres:5432/scalelite?pool=5"
+  password: ""
+  url: "postgres://admin:admin@postgres:5432/scalelite?pool=5"
 
-scalelite:
+docker_scalelite:
   repo: "blindsidenetwks"
   tag: "v1"
   recording_dir: "/mnt/scalelite-recordings/var/bigbluebutton"
 
-nginx:
+docker_nginx:
   ssl: true
   url_host: "{{ inventory_hostname }}"
 
-redis:
+docker_redis:
   url: "redis://redis:6379"
 
-scalelite_api:
-  secret_key_base: "d42985d38feb585577a8966239aebcc1"
-  loadbalancer_secret: "dedf24bce87891c1644d9b8903ec6d67"
-  loadbalancer_secrets: "80a1605cb33dd216c284b1e36aeb41f7"
+docker_scalelite_api:
+  secret_key_base: ""
+  loadbalancer_secret: ""
+  loadbalancer_secrets: ""
   redis_url: "redis://redis:6379"
-  url_host: "{{ nginx['url_host'] }}"
+  url_host: "{{ inventory_hostname }}"
 
-letsencrypt:
-  email: "certbot@gzevd.de"
+docker_letsencrypt:
+  email: "{{ certbot_admin_email }}"
   # 0 no staging | 1 staging
   staging: 0
