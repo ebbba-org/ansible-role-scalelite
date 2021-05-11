@@ -1,0 +1,54 @@
+---
+- name: Run Setup
+  block:
+    - name: Install required packages
+      apt:
+        name: "{{ bbb_required_packages }}"
+        update_cache: true
+
+    - name: Create scalelite-spool group
+      group:
+        name: scalelite-spool
+        state: present
+        gid: 2000
+
+    - name: Create bigbluebutton user
+      ansible.builtin.user:
+        name: bigbluebutton
+        create_home: true
+        group: bigbluebutton
+        groups:
+          - scalelite-spool
+
+    - name: Clone scalelite-run
+      git:
+        repo: https://github.com/ebbba-org/scalelite-run.git
+        dest: /root/scalelite-run
+        version: v1.1
+
+    - name: Create .env file
+      template:
+        src: .env.j2
+        dest: /root/scalelite-run/.env
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Tear down existing services
+      community.docker.docker_compose:
+        project_src: /root/scalelite-run
+        state: absent
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: /root/scalelite-run
+      register: dc_output
+
+    - name: Run init-letsencrypt.sh
+      command: cd /root/scalelite-run; bash init-letsencrypt.sh
+
+    - name: Run init-recordings-bigbluebutton.sh
+      command: cd /root/scalelite-run; bash init-recordings-bigbluebutton.sh
+
+    - name: Run init-recordings-scalelite.sh
+      command: cd /root/scalelite-run; bash init-recordings-scalelite.sh
