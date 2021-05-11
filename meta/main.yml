@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: scalelite
+  company: eBBBa
+  author: BrutalBirdie
+  description: Scalelite is an open source load balancer that manages a pool of BigBlueButton servers.
+
+  license: MIT
+
+  min_ansible_version: "2.0"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - bionic
+
+  galaxy_tags: []
+
+dependencies:
+  - role: geerlingguy.docker

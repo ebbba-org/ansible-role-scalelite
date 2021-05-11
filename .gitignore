@@ -1,0 +1,6 @@
+*~
+.vagrant
+*.retry
+*.patch
+.idea/
+.cache/
