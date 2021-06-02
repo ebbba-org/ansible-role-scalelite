@@ -55,18 +55,36 @@
         cmd: bash init-recordings-scalelite.sh
         chdir: /root/scalelite-run/
 
-    - name: Make sure certbot conf folder does not exist
-      file:
-        path: /root/scalelite-run/data/certbot/conf
-        state: absent
+    - name: Create letsencrypt paths
+      block:
+      - name: Make sure certbot conf folder does not exist
+        file:
+          path: /root/scalelite-run/data/certbot/conf
+          state: absent
 
-    - name: Create a symbolic link
-      file:
-        src: /etc/letsencrypt/
-        dest: /root/scalelite-run/data/certbot/conf
-        owner: root
-        group: root
-        state: link
+      - name: Create a symbolic link
+        file:
+          src: /etc/letsencrypt/
+          dest: /root/scalelite-run/data/certbot/conf
+          owner: root
+          group: root
+          state: link
+
+      rescue:
+        - name: Attempt rescue
+          block:
+          - name: Force delete folder
+            command:
+              cmd: "rm -rvf conf"
+              chdir: /root/scalelite-run/data/certbot/
+
+          - name: Symlink again
+            file:
+              src: /etc/letsencrypt/
+              dest: /root/scalelite-run/data/certbot/conf
+              owner: root
+              group: root
+              state: link
 
     - name: Create DB
       command:
