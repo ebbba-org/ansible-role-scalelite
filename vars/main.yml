@@ -1,0 +1,8 @@
+---
+required_packages:
+  - git
+  - ufw
+  - docker-compose
+  - dnsutils
+  - apt-transport-https
+  - net-tools
