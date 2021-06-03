@@ -27,6 +27,14 @@
         version: v1.1
         force: true
 
+    - name: Replace docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
+        dest: /root/scalelite-run/docker-compose.yml
+        owner: root
+        group: root
+        mode: '0644'
+
     - name: Create .env file
       template:
         src: .env.j2
@@ -57,34 +65,58 @@
 
     - name: Create letsencrypt paths
       block:
-      - name: Make sure certbot conf folder does not exist
-        file:
-          path: /root/scalelite-run/data/certbot/conf
-          state: absent
+        - name: Make sure certbot conf folder does not exist
+          file:
+            path: /root/scalelite-run/data/certbot/conf
+            state: absent
 
-      - name: Create a symbolic link
-        file:
-          src: /etc/letsencrypt/
-          dest: /root/scalelite-run/data/certbot/conf
-          owner: root
-          group: root
-          state: link
-
+        - name: Create a symbolic link
+          file:
+            src: /etc/letsencrypt/
+            dest: /root/scalelite-run/data/certbot/conf
+            owner: root
+            group: root
+            state: link
+      when: docker_letsencrypt['enabled'] | bool
       rescue:
         - name: Attempt rescue
           block:
-          - name: Force delete folder
-            command:
-              cmd: "rm -rvf conf"
-              chdir: /root/scalelite-run/data/certbot/
+            - name: Force delete folder
+              command:
+                cmd: "rm -rvf conf"
+                chdir: /root/scalelite-run/data/certbot/
 
-          - name: Symlink again
-            file:
-              src: /etc/letsencrypt/
-              dest: /root/scalelite-run/data/certbot/conf
-              owner: root
-              group: root
-              state: link
+            - name: Symlink again
+              file:
+                src: /etc/letsencrypt/
+                dest: /root/scalelite-run/data/certbot/conf
+                owner: root
+                group: root
+                state: link
+          when: docker_letsencrypt['enabled'] | bool
+
+    - name: Use own ssl-certificates
+      block:
+        - name: Ensure target directory exists
+          file:
+            dest: "/root/scalelite-run/data/certbot/conf/live/{{ inventory_hostname }}"
+            state: directory
+            mode: '0755'
+        - name: install own ssl-cert
+          become: true
+          copy:
+            src: "{{ own_ssl['cert_path'] }}"
+            dest: '/root/scalelite-run/data/certbot/conf/live/{{ inventory_hostname }}/fullchain.pem'
+            mode: '0644'
+            force: true
+        - name: install own ssl-key
+          become: true
+          copy:
+            src: "{{ own_ssl['key_path'] }}"
+            dest: '/root/scalelite-run/data/certbot/conf/live/{{ inventory_hostname }}/privkey.pem'
+            mode: '0644'
+            force: true
+      when: own_ssl['enabled'] | bool
 
     - name: Create DB
       command:

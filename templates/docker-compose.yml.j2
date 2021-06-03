@@ -1,0 +1,104 @@
+version: '3'
+
+volumes:
+  postgres-data:
+  redis-data:
+
+services:
+  postgres:
+    image: postgres:11-alpine
+    container_name: postgres
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+
+  redis:
+    image: redis:5.0-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+{% if docker_letsencrypt['enabled'] | bool %}
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./log/certbot:/var/log/letsencrypt
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+{% endif %}
+
+  scalelite-nginx:
+    image: ${SCALELITE_REPO:-blindsidenetwks}/scalelite:${SCALELITE_TAG:-v1}-nginx
+    container_name: scalelite-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./log/nginx/:/var/log/nginx
+      - ./data/certbot/conf:/etc/nginx/ssl
+      - ./data/certbot/www:/var/www/certbot
+      - ./data/nginx/scalelite:/etc/nginx/conf.d/scalelite
+      - ${SCALELITE_RECORDING_DIR-/mnt/scalelite-recordings/var/bigbluebutton}/published:/var/bigbluebutton/published
+    environment:
+      - NGINX_SSL=${NGINX_SSL-true}
+      - URL_HOST=${URL_HOST}
+    depends_on:
+      - scalelite-api
+
+  scalelite-api:
+    image: ${SCALELITE_REPO:-blindsidenetwks}/scalelite:${SCALELITE_TAG:-v1}-api
+    container_name: scalelite-api
+    restart: unless-stopped
+    volumes:
+      - ./log/scalelite/:/app/log
+      - ${SCALELITE_RECORDING_DIR-/mnt/scalelite-recordings/var/bigbluebutton}:/var/bigbluebutton
+    environment:
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - LOADBALANCER_SECRET=${LOADBALANCER_SECRET}
+      - LOADBALANCER_SECRETS=${LOADBALANCER_SECRETS}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:password@postgres:5432/scalelite?pool=5}
+      - URL_HOST=${URL_HOST}
+    depends_on:
+      - postgres
+      - redis
+    logging:
+      driver: journald
+
+  scalelite-poller:
+    image: ${SCALELITE_REPO:-blindsidenetwks}/scalelite:${SCALELITE_TAG:-v1}-poller
+    container_name: scalelite-poller
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:password@postgres:5432/scalelite?pool=5}
+    depends_on:
+      - postgres
+      - redis
+      - scalelite-api
+    logging:
+      driver: journald
+
+  scalelite-recording-importer:
+    image: ${SCALELITE_REPO:-blindsidenetwks}/scalelite:${SCALELITE_TAG:-v1}-recording-importer
+    container_name: scalelite-recording-importer
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:password@postgres:5432/scalelite?pool=5}
+    volumes:
+      - ${SCALELITE_RECORDING_DIR-/mnt/scalelite-recordings/var/bigbluebutton}:/var/bigbluebutton
+      - ${SCALELITE_RECORDING_DIR-/mnt/scalelite-recordings/var/bigbluebutton}/spool:/var/bigbluebutton/spool
+    depends_on:
+      - postgres
+      - redis
+      - scalelite-api
+    logging:
+      driver: journald

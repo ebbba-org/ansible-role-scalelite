@@ -2,7 +2,8 @@
 docker_postgres:
   user: "admin"
   password: ""
-  url: "postgres://admin:admin@postgres:5432/scalelite?pool=5"
+  database: "postgres:5432/scalelite?pool=5"
+  url: "postgres"
 
 docker_scalelite:
   repo: "blindsidenetwks"
@@ -24,6 +25,14 @@ docker_scalelite_api:
   url_host: "{{ inventory_hostname }}"
 
 docker_letsencrypt:
+  enabled: true
   email: "{{ certbot_admin_email }}"
   # 0 no staging | 1 staging
   staging: 0
+
+own_ssl:
+  enabled: false
+  cert_path: ''
+  key_path: ''
+
+bbb_turn_enable: false
