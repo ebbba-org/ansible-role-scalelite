@@ -57,6 +57,10 @@
 
     - name: Create letsencrypt paths
       block:
+      - name: Stop services to link letsencrypt certs
+        community.docker.docker_compose:
+          project_src: /root/scalelite-run
+          stopped: yes
       - name: Make sure certbot conf folder does not exist
         file:
           path: /root/scalelite-run/data/certbot/conf
@@ -69,7 +73,10 @@
           owner: root
           group: root
           state: link
-
+      - name: Start services again
+        community.docker.docker_compose:
+          project_src: /root/scalelite-run
+          state: present
       rescue:
         - name: Attempt rescue
           block:
