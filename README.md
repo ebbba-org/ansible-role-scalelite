@@ -38,6 +38,7 @@ docker_scalelite_api:
   loadbalancer_secrets: "80a1605cb33dd216c284b1e36aeb41f7"
   redis_url: "redis://redis:6379"
   url_host: "{{ inventory_hostname }}"
+  server_id_is_hostname: true
 
 docker_letsencrypt:
   email: "{{ certbot_admin_email }}"
